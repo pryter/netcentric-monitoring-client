@@ -1,103 +1,114 @@
+"use client"
+
+import {useEffect, useState} from "react";
 import Image from "next/image";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [connection, setConn] = useState<WebSocket | null>(null)
+  const [data, setData] = useState<{roomReg: Record<string, any>[], connectionPool: unknown[]}| null>(null)
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const connect = () => {
+    const conn = new WebSocket("ws://localhost:8080/monitoring");
+    conn.onopen = (ws) => {
+      setConn(conn)
+      // auto upgrade
+      conn.send(JSON.stringify({type: "upgrade", data: {token: "12345"}}))
+    }
+
+    conn.onmessage = (e) => {
+      const message = JSON.parse(e.data)
+      if (message.data.group === "monitoring-event") {
+        setData(message.data.data)
+      }
+      if (message.data.name == "upgrade-success") {
+        conn.send(JSON.stringify({type: "message", data: {group: "client-action", name: "sub-mon-stream"}}))
+      }
+    }
+  }
+
+
+  useEffect(() => {
+    connect()
+  }, []);
+  return (
+  <div className="p-6">
+    <h1 className="font-semibold mb-2">Connection Pool</h1>
+    <div className="flex items-start p-4 border rounded-xl gap-4 overflow-x-auto">
+      {data?.connectionPool.map((c) => {
+        const d = c as {id: string, state: string, user: Record<string, string>, lastActive: number, type: string}
+        return <div className="flex flex-col border relative bg-white rounded-xl p-4" key={d.id ?? ""}>
+          <h1 className="top-1 absolute text-[8px]">conn-id: {d.id}</h1>
+          {d.type === "monitoring" ? <h1 className="mt-8 mb-4 font-semibold text-gray-500">Monitoring Client</h1>: <div className="flex flex-row space-x-2 mt-2">
+            {d.user?.avatar &&
+                <img src={d.user?.avatar} alt={"avatar"} className="rounded-full" width={64} height={64}/>}
+            <div className="flex flex-col">
+              <h1 className="text-xs">userid: <span className="font-semibold">{d.user?.uid}</span></h1>
+              <h1 className="text-sm">nickname: <span className="font-semibold">{d.user?.nickname}</span></h1>
+              <div className="flex space-x-2">
+                <h1 className="text-sm">level: {d.user?.level}</h1>
+                <h1 className="text-sm">score: {d.user?.score}</h1>
+              </div>
+            </div>
+          </div>}
+          <div>
+            <h1 className="font-semibold mt-2">Connection detail</h1>
+            <h1 className="text-sm">state: {d.state}</h1>
+            <h1 className="text-sm">acc-type: {d.type}</h1>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      })}
     </div>
+    <h1 className="font-semibold mb-2 mt-4">Gameroom Registry</h1>
+    <div className="flex flex-row p-4 border rounded-xl gap-4 overflow-x-auto">
+      {data?.roomReg.map((r) => {
+
+        return <div className="flex flex-wrap max-w-[400px] border p-2 rounded-xl space-x-2 space-y-1" key={r.id as string}>
+          {
+            Object.entries(r).map(([k, v]) => {
+              if (typeof v === "string" || typeof v === "number") {
+                return  (
+                  <div className="bg-gray-100 rounded-full px-2" key={k}>
+                    <span className="text-gray-500 font-semibold">{k}</span>: {v}
+                  </div>
+                )
+              }
+
+              if (v === null) {
+                return   <div className="bg-gray-100 rounded-full px-2" key={k}>
+                  <span className="text-gray-500 font-semibold">{k}</span>: <span className="text-amber-600">null</span>
+                </div>
+              }
+              if (k === "players") {
+                return <div key={k} className="px-1 mt-3">
+                  <h1 className="font-semibold">Players</h1>
+                  {Object.values(v).map((vv: any, k) => {
+                    return <div key={k} style={{opacity: vv.isDisconnected ? 0.6 : 1}} className="flex flex-row space-x-2 mt-2">
+                      {vv?.avatarUri &&
+                          <img src={vv.avatarUri} alt={"avatar"} className="rounded-full grow-0 size-[64px]" width={64} height={64}/>}
+                      <div className="flex flex-col">
+                        <h1 className="text-xs">userid: <span className="font-semibold">{vv.id}</span></h1>
+                        <h1 className="text-sm">nickname: <span className="font-semibold">{vv.displayName}</span></h1>
+                        <h1 className="text-sm">match-score: <span className="font-semibold">{vv.score}</span></h1>
+                        <div className="flex space-x-2">
+                          <h1 className="text-sm">isReady: <span className="font-semibold">{vv.isReady ? "true" : "false"}</span></h1>
+                          <h1 className="text-sm">isDisconnected: <span className="font-semibold">{vv.isDisconnected ? "true" : "false"}</span></h1>
+                        </div>
+                      </div>
+                    </div>
+                  })}
+                </div>
+              }
+
+              if (k === "question") {
+                return <div className="bg-gray-100 rounded-full px-2" key={k}>
+                  <span className="text-gray-500 font-semibold">{k}</span>: {v.problem.join(", ")} find {v.target}
+                </div>
+              }
+            })
+          }
+        </div>
+      })}
+    </div>
+  </div>
   );
 }
