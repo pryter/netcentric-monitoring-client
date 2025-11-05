@@ -9,8 +9,8 @@ export default function Home() {
   const [token, setToken] = useState<string | null>(null)
 
   const connect = () => {
-    const conn = new WebSocket("wss://netcen-game-server-oc1.pryter.me/monitoring");
-    // const conn = new WebSocket("ws://localhost:8080/monitoring");
+    // const conn = new WebSocket("wss://netcen-game-server-oc1.pryter.me/monitoring");
+    const conn = new WebSocket("ws://localhost:8080/monitoring");
     conn.onopen = (ws) => {
       setConn(conn)
       // auto upgrade
