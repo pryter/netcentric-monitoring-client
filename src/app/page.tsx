@@ -1,18 +1,20 @@
 "use client"
 
-import {useEffect, useState} from "react";
+import {useCallback, useEffect, useState} from "react";
 import Image from "next/image";
 
 export default function Home() {
   const [connection, setConn] = useState<WebSocket | null>(null)
   const [data, setData] = useState<{roomReg: Record<string, any>[], connectionPool: unknown[]}| null>(null)
+  const [token, setToken] = useState<string | null>(null)
 
   const connect = () => {
-    const conn = new WebSocket("ws://localhost:8080/monitoring");
+    const conn = new WebSocket("wss://netcen-game-server-oc1.pryter.me/monitoring");
+    // const conn = new WebSocket("ws://localhost:8080/monitoring");
     conn.onopen = (ws) => {
       setConn(conn)
       // auto upgrade
-      conn.send(JSON.stringify({type: "upgrade", data: {token: "12345"}}))
+      conn.send(JSON.stringify({type: "upgrade", data: {token:token ?? "12345"}}))
     }
 
     conn.onmessage = (e) => {
@@ -20,18 +22,26 @@ export default function Home() {
       if (message.data.group === "monitoring-event") {
         setData(message.data.data)
       }
+
+      if (message.data.group === "server-response") {
+        console.log(message.data.data)
+      }
       if (message.data.name == "upgrade-success") {
-        conn.send(JSON.stringify({type: "message", data: {group: "client-action", name: "sub-mon-stream"}}))
+        conn.send(JSON.stringify({type: "message", data: {group: "monitoring-action", name: "sub-mon-stream"}}))
       }
     }
   }
 
+  const resetState = useCallback((id: string) => {
+    connection?.send(JSON.stringify({type: "message", data: {group: "monitoring-action", name: "reset-room", data: {roomId: id}}}))
+  }, [connection])
 
-  useEffect(() => {
-    connect()
-  }, []);
   return (
   <div className="p-6">
+    <div className="relative flex flex-row space-x-2 max-w-[200px] mb-6">
+      <input className="border rounded-lg px-4 grow" type="text" placeholder="token" onChange={(e) => {setToken(e.target.value)}}/>
+      <button className="border py-1 px-3 rounded-lg text-sm font-semibold cursor-pointer" onClick={() => {connect()}}>Connect</button>
+    </div>
     <h1 className="font-semibold mb-2">Connection Pool</h1>
     <div className="flex items-start p-4 border rounded-xl gap-4 overflow-x-auto">
       {data?.connectionPool.map((c) => {
@@ -61,7 +71,6 @@ export default function Home() {
     <h1 className="font-semibold mb-2 mt-4">Gameroom Registry</h1>
     <div className="flex flex-row p-4 border rounded-xl gap-4 overflow-x-auto">
       {data?.roomReg.map((r) => {
-
         return <div className="flex flex-wrap max-w-[400px] border p-2 rounded-xl space-x-2 space-y-1" key={r.id as string}>
           {
             Object.entries(r).map(([k, v]) => {
@@ -106,6 +115,9 @@ export default function Home() {
               }
             })
           }
+          <div className="mt-4 flex space-x-2 items-center">
+            <button className="border py-1 px-3 rounded-xl text-sm font-semibold cursor-pointer" onClick={() => {resetState(r.id as string)}}>Reset States</button>
+          </div>
         </div>
       })}
     </div>
