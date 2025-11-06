@@ -7,10 +7,10 @@ export default function Home() {
   const [connection, setConn] = useState<WebSocket | null>(null)
   const [data, setData] = useState<{roomReg: Record<string, any>[], connectionPool: unknown[]}| null>(null)
   const [token, setToken] = useState<string | null>(null)
+  const [url, setUrl] = useState<string>("ws://localhost:8080/monitoring")
 
   const connect = () => {
-    // const conn = new WebSocket("wss://netcen-game-server-oc1.pryter.me/monitoring");
-    const conn = new WebSocket("ws://localhost:8080/monitoring");
+    const conn = new WebSocket(url);
     conn.onopen = (ws) => {
       setConn(conn)
       // auto upgrade
@@ -38,6 +38,13 @@ export default function Home() {
 
   return (
   <div className="p-6">
+
+    <div className="flex flex-row items-center">
+      <span className="mr-2">local:</span>
+      <input type="radio" name="server" id="local" value="local" defaultChecked onChange={(e) => {setUrl("ws://localhost:8080/monitoring")}}/>
+      <span className="mr-2 ml-4">global:</span>
+      <input type="radio" name="server" id="global" value="global" onChange={(e) => {setUrl("wss://netcen-game-server-oc1.pryter.me/monitoring")}}/>
+    </div>
     <div className="relative flex flex-row space-x-2 max-w-[200px] mb-6">
       <input className="border rounded-lg px-4 grow" type="text" placeholder="token" onChange={(e) => {setToken(e.target.value)}}/>
       <button className="border py-1 px-3 rounded-lg text-sm font-semibold cursor-pointer" onClick={() => {connect()}}>Connect</button>
