@@ -1,6 +1,6 @@
 "use client"
 
-import {useCallback, useEffect, useState} from "react";
+import {useCallback, useEffect, useMemo, useState} from "react";
 import Image from "next/image";
 
 export default function Home() {
@@ -8,6 +8,16 @@ export default function Home() {
   const [data, setData] = useState<{roomReg: Record<string, any>[], connectionPool: unknown[]}| null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [url, setUrl] = useState<string>("ws://localhost:8080/monitoring")
+
+  const connections = useMemo(() => {
+    if (!data) return {mon: [], users: []}
+   const mon = data?.connectionPool.filter((a: any) => (a["type"] === "monitoring")) ?? []
+    const users = data?.connectionPool.filter((a: any) => (a["type"] === "default")) ?? []
+    return {
+     mon,
+      users
+    }
+  }, [data?.connectionPool])
 
   const connect = () => {
     const conn = new WebSocket(url);
@@ -50,6 +60,7 @@ export default function Home() {
       <button className="border py-1 px-3 rounded-lg text-sm font-semibold cursor-pointer" onClick={() => {connect()}}>Connect</button>
     </div>
     <h1 className="font-semibold mb-2">Connection Pool</h1>
+    <p>Users <span className="font-semibold">{connections.users?.length}</span> Monitor <span className="font-semibold">{connections.mon?.length}</span></p>
     <div className="flex items-start p-4 border rounded-xl gap-4 overflow-x-auto">
       {data?.connectionPool.map((c) => {
         const d = c as {id: string, state: string, user: Record<string, string>, lastActive: number, type: string}
